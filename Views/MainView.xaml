@@ -10,6 +10,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -38,16 +39,93 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-            <TextBox Grid.Column="0" Text="{Binding WindowSize}"/>
-            <ComboBox Grid.Column="1" ItemsSource="{Binding WindowTypes}" SelectedItem="{Binding SelectedWindowType, Mode=TwoWay}">
+            <Label Grid.Column="0" Grid.Row="0">M:</Label>
+            <TextBox Grid.Column="1" Grid.Row="0" Text="{Binding WindowSize}"/>
+
+            <Label Grid.Column="2" Grid.Row="0">Window function:</Label>
+            <ComboBox Grid.Column="3" Grid.Row="0" ItemsSource="{Binding WindowTypes}" SelectedItem="{Binding SelectedWindowType, Mode=TwoWay}">
                 <ComboBox.ItemTemplate>
                     <DataTemplate>
                         <Label Content="{Binding}"/>
                     </DataTemplate>
                 </ComboBox.ItemTemplate>
             </ComboBox>
+
+            <Label Grid.Column="0" Grid.Row="1">R:</Label>
+            <TextBox Grid.Column="1" Grid.Row="1" Text="{Binding HopSize}"/>
+
+            <Label Grid.Column="2" Grid.Row="1">Zero filling method:</Label>
+            <ComboBox Grid.Column="3" Grid.Row="1" ItemsSource="{Binding ZeroFillingMethods}" SelectedItem="{Binding SelectedZeroFillingMethod, Mode=TwoWay}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <Label Content="{Binding}"/>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+
+            <Label Grid.Column="0" Grid.Row="2">L:</Label>
+            <TextBox Grid.Column="1" Grid.Row="2" Text="{Binding FilterLength}"/>
+
+            <Label Grid.Column="2" Grid.Row="2">Fs (Hz):</Label>
+            <TextBox Grid.Column="3" Grid.Row="2" IsEnabled="False" Text="{Binding SampleRate}"/>
+
+            <Label Grid.Column="2" Grid.Row="3">Fc (Hz):</Label>
+            <TextBox Grid.Column="3" Grid.Row="3" Text="{Binding CutoffFrequency}"/>
+        </Grid>
+
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="26"/>
+            </Grid.RowDefinitions>
+
+            <Label Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" HorizontalAlignment="Center">Filter with finite impulse response</Label>
+
+            <Button Grid.Row="1" Grid.Column="0" Command="{Binding _FilterWithFiniteImpluseResponseInTheTimeDomain}">In the time domain</Button>
+            <Button Grid.Row="1" Grid.Column="1" Command="{Binding _FilterWithFiniteImpluseResponseInTheFrequencyDomain}">In the frequency domain</Button>
+
+            <Label Grid.Row="2" Grid.Column="0" Content="{Binding FilterTimeInTheTimeDomain}" ContentStringFormat="Calculation time: {0} ms"/>
+            <Label Grid.Row="2" Grid.Column="1" Content="{Binding FilterTimeInTheFrequencyDomain}" ContentStringFormat="Calculation time: {0} ms"/>
+        </Grid>
+
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <Button Grid.Row="0" Grid.Column="0" Command="{Binding _ShowResultInTimeDomain}">Show Result</Button>
+            <Button Grid.Row="0" Grid.Column="1" Command="{Binding _ShowResultInFrequencyDomain}">Show Result</Button>
+
+            <oxy:Plot Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Visibility="{Binding ShowResultInTheTimeDomain, Converter={StaticResource BooleanToVisibilityConverter}}" Title="Filtered signal in the time domain">
+                <oxy:Plot.Series>
+                    <oxy:LineSeries ItemsSource="{Binding FilteredSignalInTheTimeDomain}"/>
+                </oxy:Plot.Series>
+            </oxy:Plot>
+            <oxy:Plot Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Visibility="{Binding ShowResultInTheFrequencyDomain, Converter={StaticResource BooleanToVisibilityConverter}}" Title="Filtered signal in the frequency domain">
+                <oxy:Plot.Series>
+                    <oxy:LineSeries ItemsSource="{Binding FilteredSignalInTheFrequencyDomain}"/>
+                </oxy:Plot.Series>
+            </oxy:Plot>
         </Grid>
     </Grid>
 </UserControl>

@@ -69,6 +69,7 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="Converters\NullToVisibilityConverter.cs" />
+    <Compile Include="Models\FilterWithFiniteImpulseResponse.cs" />
     <Compile Include="Models\FourierTransform.cs" />
     <Compile Include="Models\Complex.cs" />
     <Compile Include="Models\FourierWindows.cs" />
