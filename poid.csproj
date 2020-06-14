@@ -68,9 +68,6 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="Components\LoadingWrapper.xaml.cs">
-      <DependentUpon>LoadingWrapper.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Converters\NullToVisibilityConverter.cs" />
     <Compile Include="Models\FourierTransform.cs" />
     <Compile Include="Models\Complex.cs" />
@@ -83,10 +80,6 @@
     <Compile Include="Views\MainView.xaml.cs">
       <DependentUpon>MainView.xaml</DependentUpon>
     </Compile>
-    <Page Include="Components\LoadingWrapper.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
