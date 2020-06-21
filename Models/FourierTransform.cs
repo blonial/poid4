@@ -8,19 +8,39 @@ namespace poid.Models
     {
         #region Static Methods
 
-        public static List<Complex> FFT(double[] samples)
+        public static Complex[] FFT(double[] samples)
         {
             List<Complex> formatted = new List<Complex>();
             for (int i = 0; i < samples.Length; i++)
             {
                 formatted.Add(new Complex(samples[i], 0));
             }
-            return CalculateFastTransform(formatted, CalculateWCoefficients(formatted.Count, false), 0);
+            return CalculateFastTransform(formatted, CalculateWCoefficients(formatted.Count, false), 0).ToArray();
         }
 
         public static double[] IFFT(List<Complex> signal)
         {
             List<Complex> ifft = CalculateFastTransform(signal, CalculateWCoefficients(signal.Count, true), 0);
+            Complex divisor = new Complex(ifft.Count, 0);
+            ifft = ifft.Select(x => x = Complex.Divide(x, divisor)).ToList();
+
+            double[] result = new double[ifft.Count];
+            for (int i = 0; i < result.Length; i++)
+            {
+                result[i] = ifft[i].Re;
+            }
+            return result;
+        }
+
+        public static double[] IFFT(Complex[] signal)
+        {
+            List<Complex> data = new List<Complex>();
+            for (int i = 0; i < signal.Length; i++)
+            {
+                data.Add(signal[i]);
+            }
+
+            List<Complex> ifft = CalculateFastTransform(data, CalculateWCoefficients(data.Count, true), 0);
             Complex divisor = new Complex(ifft.Count, 0);
             ifft = ifft.Select(x => x = Complex.Divide(x, divisor)).ToList();
 

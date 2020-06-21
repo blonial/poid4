@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace poid.Models
 {
@@ -9,58 +11,42 @@ namespace poid.Models
         public static double[] GetFilterValues(int fc, int fs, int L)
         {
             double[] result = new double[L];
-            for (int k = 0; k < L; k++)
+            double half = (L - 1) / 2.0;
+
+            for (int i = 0; i < L; i++)
             {
-                if (k == (L - 1) / 2)
+                if (i == half)
                 {
-                    result[k] = (2 * fc) / fs;
+                    result[i] = 2 * fc / fs;
                 }
                 else
                 {
-                    double nominator = Math.Sin(((2.0 * Math.PI * fc) / fs) * (k - ((L - 1.0) / 2.0)));
-                    double denominator = Math.PI * (k - ((L - 1.0) / 2.0));
-                    result[k] = nominator / denominator;
+                    result[i] = Math.Sin(2 * Math.PI * fc / fs * (i - half)) / (Math.PI * (i - half));
                 }
             }
+
             return result;
         }
 
-        public static double[] FilterInTheTimeDomain(double[] samples, double[] filterValues)
+        public static double[] FilterInTheTimeDomain(double[] samples, double[] filterValues, int L)
         {
-            int L = filterValues.Length;
             double[] result = new double[samples.Length + L - 1];
 
-            for (int n = 0; n < result.Length; n++)
+            List<double> data = samples.ToList();
+            double[] zeros = new double[L - 1];
+
+            data.InsertRange(0, zeros);
+            data.AddRange(zeros);
+
+            for (int i = L - 1; i < data.Count; i++)
             {
-                if (n < L)
+
+                for (int j = 0; j < filterValues.Length; j++)
                 {
-                    result[n] = 0;
-                }
-                else
-                {
-                    result[n] = samples[n - L];
+                    result[i - L + 1] += data[i - j] * filterValues[j];
                 }
             }
 
-            for (int n = L; n < result.Length; n++)
-            {
-                double sum = 0;
-                for (int k = 0; k < L; k++)
-                {
-                    double x_n_k = result[n - k];
-                    double h_k = filterValues[k];
-                    sum += x_n_k * h_k;
-                }
-                result[n] = sum;
-            }
-
-            return result;
-        }
-
-        public static double[] GetResultInTheTimeDomain(double[] samples, int filterLength)
-        {
-            double[] result = new double[samples.Length - filterLength];
-            Array.Copy(samples, filterLength - 1, result, 0, samples.Length - filterLength);
             return result;
         }
 

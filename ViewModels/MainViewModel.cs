@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Linq;
 using System.Windows.Input;
 using static poid.Models.FourierWindows;
 
@@ -420,10 +421,11 @@ namespace poid.ViewModels
                 int L = int.Parse(this.FilterLength);
                 int Fc = int.Parse(this.CutoffFrequency);
                 int Fs = this.SampleRate;
+
                 double[] filter = FilterWithFiniteImpulseResponse.GetFilterValues(Fc, Fs, L);
-                double[] smoothedFilter = FourierWindows.MultiplyByWindowFunction(filter, this.SelectedWindowType);
-                double[] result = FilterWithFiniteImpulseResponse.FilterInTheTimeDomain(this.SignalData.Samples, smoothedFilter);
-                double[] clearResult = FilterWithFiniteImpulseResponse.GetResultInTheTimeDomain(result, L);
+                double[] filtered = FourierWindows.MultiplyByWindowFunction(filter, this.SelectedWindowType);
+                double[] result = FilterWithFiniteImpulseResponse.FilterInTheTimeDomain(this.SignalData.Samples, filtered, L);
+
                 this.FilterResultInTheTimeDomain = result;
             }
             catch (Exception e)
@@ -445,31 +447,85 @@ namespace poid.ViewModels
                 int L = int.Parse(this.FilterLength);
                 int Fc = int.Parse(this.CutoffFrequency);
                 int Fs = this.SampleRate;
-                double[] filter = FilterWithFiniteImpulseResponse.GetFilterValues(Fc, Fs, L);
-                double[] smoothedFilter = FourierWindows.MultiplyByWindowFunction(filter, this.SelectedWindowType);
-
+                int R = int.Parse(this.HopSize);
                 int M = int.Parse(this.WindowSize);
-                double[][] sampleWindows = FourierWindows.SplitSamplesToWindows(this.SignalData.Samples, M);
+                int n = GetExpandedPow2(M + L - 1);
+                int size = this.SignalData.Samples.Length + n - L;
+                double[] result = new double[size];
 
-                int N = M + L - 1;
-                double[] filterWithZeros = FourierWindows.FillWithZeros(smoothedFilter, N, this.SelectedZeroFillingMethod);
-                List<Complex> filterFFT = FourierTransform.FFT(filterWithZeros);
+                double[][] windows = new double[size / R][];
+                Complex[][] windowsComplex = new Complex[size / R][];
 
-                double[] result = new double[this.SignalData.Samples.Length];
-                for (int i = 0; i < sampleWindows.Length; i++)
+                for (int i = 0; i < windows.Length; i++)
                 {
-                    double[] samples = sampleWindows[i];
-                    double[] samplesWithZeros = FourierWindows.FillWithZeros(samples, N, this.SelectedZeroFillingMethod);
-                    List<Complex> samplesFFT = FourierTransform.FFT(samplesWithZeros);
+                    windows[i] = new double[n];
+                    windowsComplex[i] = new Complex[n];
+                }
 
-                    for (int j = 0; j < samplesFFT.Count; j++)
+                double[] windowFactors = FilterWithFiniteImpulseResponse.GetFilterValues(Fc, Fs, L);
+                for (int i = 0; i < windows.Length; i++)
+                {
+                    for (int j = 0; j < L; j++)
                     {
-                        samplesFFT[j] = Complex.Multiply(samplesFFT[j], filterFFT[j]);
+                        if (i * R + j < this.SignalData.Samples.Length)
+                        {
+                            windows[i][j] = windowFactors[j] * this.SignalData.Samples[i * R + j];
+                        }
+                        else
+                        {
+                            windows[i][j] = 0;
+                        }
                     }
+                    for (int j = L; j < n; j++)
+                    {
+                        windows[i][j] = 0;
+                    }
+                }
 
-                    double[] samplesAfterFilter = FourierTransform.IFFT(samplesFFT);
-                    double[] clearResult = FourierWindows.GetResultWithoutZeros(samplesAfterFilter, M, this.SelectedZeroFillingMethod);
-                    Array.Copy(clearResult, 0, result, i * M, M);
+                double[] windowFilterFactors = FourierWindows.GetWindowFactors(M, this.SelectedWindowType);
+                double[] filterFactors = FilterWithFiniteImpulseResponse.GetFilterValues(Fc, Fs, L);
+                double[] filtered = new double[n];
+                for (int i = 0; i < L; i++)
+                {
+                    filtered[i] = windowFilterFactors[i] * filterFactors[i];
+                }
+
+                for (int i = L; i < n; i++)
+                {
+                    filtered[i] = 0;
+                }
+
+                if (this.SelectedZeroFillingMethod == ZeroFillingMethod.CauselessFilter)
+                {
+                    int shiftNumberFilter = (L - 1) / 2;
+
+                    IEnumerable<double> shiftedFilter = filtered.Take(shiftNumberFilter);
+                    List<double> filteredTemp = filtered.Skip(shiftNumberFilter).ToList();
+                    filteredTemp.AddRange(shiftedFilter);
+                    filtered = filteredTemp.ToArray();
+                }
+
+                var filteredComplex = FourierTransform.FFT(filtered);
+
+                for (int i = 0; i < windows.Length; i++)
+                {
+                    windowsComplex[i] = FourierTransform.FFT(windows[i]);
+                    for (int j = 0; j < windowsComplex[i].Length; j++)
+                    {
+                        windowsComplex[i][j] = Complex.Multiply(windowsComplex[i][j], filteredComplex[j]);
+                    }
+                    windows[i] = FourierTransform.IFFT(windowsComplex[i]);
+                }
+
+                for (int i = 0; i < windows.Length; i++)
+                {
+                    for (int j = 0; j < windows[i].Length; j++)
+                    {
+                        if (i * R + j < this.SignalData.Samples.Length)
+                        {
+                            result[i * R + j] += windows[i][j];
+                        }
+                    }
                 }
 
                 this.FilterResultInTheFrequencyDomain = result;
@@ -493,6 +549,11 @@ namespace poid.ViewModels
         {
             this.ShowResultInTheTimeDomain = false;
             this.ShowResultInTheFrequencyDomain = true;
+        }
+
+        private static int GetExpandedPow2(int length)
+        {
+            return (int)Math.Pow(2, (int)Math.Log(length, 2) + 1);
         }
 
         #endregion
