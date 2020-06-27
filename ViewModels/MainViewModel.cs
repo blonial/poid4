@@ -8,6 +8,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Numerics;
 using System.Windows.Input;
 using static poid.Models.FourierWindows;
 
@@ -105,7 +106,7 @@ namespace poid.ViewModels
 
         public ObservableCollection<ZeroFillingMethod> ZeroFillingMethods { get; } = new ObservableCollection<ZeroFillingMethod> { ZeroFillingMethod.CausalFilter, ZeroFillingMethod.CauselessFilter };
 
-        private WindowType _SelectedWindowType = WindowType.Hamming;
+        private WindowType _SelectedWindowType = WindowType.Hanning;
         public WindowType SelectedWindowType
         {
             get
@@ -133,7 +134,7 @@ namespace poid.ViewModels
             }
         }
 
-        private string _WindowSize = "1024";
+        private string _WindowSize = "2049";
         public string WindowSize
         {
             get
@@ -147,7 +148,7 @@ namespace poid.ViewModels
             }
         }
 
-        private string _HopSize = "64";
+        private string _HopSize = "1024";
         public string HopSize
         {
             get
@@ -161,7 +162,7 @@ namespace poid.ViewModels
             }
         }
 
-        private string _FilterLength = "63";
+        private string _FilterLength = "1025";
         public string FilterLength
         {
             get
@@ -175,7 +176,7 @@ namespace poid.ViewModels
             }
         }
 
-        private string _CutoffFrequency = "128";
+        private string _CutoffFrequency = "500";
         public string CutoffFrequency
         {
             get
@@ -462,7 +463,7 @@ namespace poid.ViewModels
                     windowsComplex[i] = new Complex[n];
                 }
 
-                double[] windowFactors = FilterWithFiniteImpulseResponse.GetFilterValues(Fc, Fs, L);
+                double[] windowFactors = FourierWindows.GetWindowFactors(M, this.SelectedWindowType);
                 for (int i = 0; i < windows.Length; i++)
                 {
                     for (int j = 0; j < L; j++)
@@ -482,7 +483,7 @@ namespace poid.ViewModels
                     }
                 }
 
-                double[] windowFilterFactors = FourierWindows.GetWindowFactors(M, this.SelectedWindowType);
+                double[] windowFilterFactors = FourierWindows.GetWindowFactors(L, this.SelectedWindowType);
                 double[] filterFactors = FilterWithFiniteImpulseResponse.GetFilterValues(Fc, Fs, L);
                 double[] filtered = new double[n];
                 for (int i = 0; i < L; i++)
@@ -505,7 +506,7 @@ namespace poid.ViewModels
                     filtered = filteredTemp.ToArray();
                 }
 
-                var filteredComplex = FourierTransform.FFT(filtered);
+                Complex[] filteredComplex = FourierTransform.FFT(filtered);
 
                 for (int i = 0; i < windows.Length; i++)
                 {

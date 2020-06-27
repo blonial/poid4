@@ -16,24 +16,17 @@ namespace poid.Models
 
         public static double Hamming(int i, int N)
         {
-            return 0.53836 - (0.46164 * Math.Cos((2.0 * Math.PI * i) / (N - 1.0)));
+            return 0.53836 - 0.46164 * Math.Cos(2 * Math.PI * i / (N - 1));
         }
 
         public static double Hanning(int i, int N)
         {
-            return 0.5 * (0.5 * Math.Cos((2.0 * Math.PI * i) / (N - 1.0)));
+            return 0.5 * (1 - Math.Cos(2 * Math.PI * i / (N - 1)));
         }
 
         public static double Rectangular(int i, int N)
         {
-            if (i >= -(N - 1) / 2 && i <= (N - 1) / 2)
-            {
-                return 1;
-            }
-            else
-            {
-                return 0;
-            }
+            return i < N ? 1 : 0;
         }
 
         public static double[] MultiplyByWindowFunction(double[] samples, WindowType windowType)

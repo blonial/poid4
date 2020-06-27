@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 
 namespace poid.Models
 {
@@ -8,100 +8,117 @@ namespace poid.Models
     {
         #region Static Methods
 
-        public static Complex[] FFT(double[] samples)
+        public static Complex[] DFT(double[] points)
         {
-            List<Complex> formatted = new List<Complex>();
-            for (int i = 0; i < samples.Length; i++)
+            var transformed = new Complex[points.Length];
+            int N = points.Length;
+            for (int i = 0; i < N; i++)
             {
-                formatted.Add(new Complex(samples[i], 0));
+                Complex transformedValue = Complex.Zero;
+                for (int j = 0; j < N; j++)
+                {
+                    transformedValue += points[j] * Complex.Exp(new Complex(0, -2 * Math.PI * i * j / N));
+                }
+                transformed[i] = transformedValue / N;
             }
-            return CalculateFastTransform(formatted, CalculateWCoefficients(formatted.Count, false), 0).ToArray();
+            return transformed;
         }
 
-        public static double[] IFFT(List<Complex> signal)
+        public static double[] IDFT(Complex[] points)
         {
-            List<Complex> ifft = CalculateFastTransform(signal, CalculateWCoefficients(signal.Count, true), 0);
-            Complex divisor = new Complex(ifft.Count, 0);
-            ifft = ifft.Select(x => x = Complex.Divide(x, divisor)).ToList();
+            var transformed = new double[points.Length];
 
-            double[] result = new double[ifft.Count];
-            for (int i = 0; i < result.Length; i++)
+            int N = points.Length;
+            for (int i = 0; i < N; i++)
             {
-                result[i] = ifft[i].Re;
+                double transformedValue = 0;
+                for (int j = 0; j < N; j++)
+                {
+                    transformedValue += (points[j] * Complex.Exp(new Complex(0, 2 * Math.PI * i * j / N))).Real;
+                }
+                transformed[i] = transformedValue;
             }
-            return result;
+            return transformed;
         }
 
-        public static double[] IFFT(Complex[] signal)
+        public static Complex[] FFT(double[] data)
         {
-            List<Complex> data = new List<Complex>();
-            for (int i = 0; i < signal.Length; i++)
-            {
-                data.Add(signal[i]);
-            }
+            var complexData = data.Select(c => (Complex)c).ToArray();
 
-            List<Complex> ifft = CalculateFastTransform(data, CalculateWCoefficients(data.Count, true), 0);
-            Complex divisor = new Complex(ifft.Count, 0);
-            ifft = ifft.Select(x => x = Complex.Divide(x, divisor)).ToList();
+            FFT1D(complexData);
 
-            double[] result = new double[ifft.Count];
-            for (int i = 0; i < result.Length; i++)
-            {
-                result[i] = ifft[i].Re;
-            }
-            return result;
+            return complexData;
         }
 
-        private static List<Complex> CalculateFastTransform(List<Complex> signal, List<Complex> wCoefficients, int recursionDepth)
+        public static double[] IFFT(Complex[] complexData)
         {
-            List<Complex> evenElements = new List<Complex>();
-            List<Complex> oddElements = new List<Complex>();
-            bool isEven = true;
-            foreach (Complex number in signal)
-            {
-                if (isEven) evenElements.Add(number);
-                else oddElements.Add(number);
-                isEven = !isEven;
-            }
+            Conjugate(complexData);
+            FFT1D(complexData);
+            Conjugate(complexData);
 
-            List<Complex> evenElementsTransformed = evenElements;
-            List<Complex> oddElementsTransformed = oddElements;
-            if (evenElements.Count > 1) evenElementsTransformed = CalculateFastTransform(evenElements, wCoefficients, recursionDepth + 1);
-            if (oddElements.Count > 1) oddElementsTransformed = CalculateFastTransform(oddElements, wCoefficients, recursionDepth + 1);
-
-            List<Complex> result = new List<Complex>();
-            result.AddRange(Enumerable.Repeat(new Complex(0, 0), signal.Count));
-
-            int halfOfSampleCount = signal.Count / 2;
-            for (int i = 0; i < evenElements.Count; i++)
-            {
-                Complex product = Complex.Multiply(wCoefficients[(int)(i * Math.Pow(2, recursionDepth))], oddElementsTransformed[i]);
-                result[i] = Complex.Add(evenElementsTransformed[i], product);
-                result[i + halfOfSampleCount] = Complex.Subtract(evenElementsTransformed[i], product);
-            }
-            return result;
+            return complexData.Select(c => (c / complexData.Length).Real).ToArray();
         }
 
-        private static Complex GetWCoefficient(double upperCoefficient, double lowerCoefficient, bool isNegativeExponent)
+        private static void FFT1D(Complex[] buffer)
         {
-            Complex result = new Complex();
-            double exponent = (2.0 * Math.PI * upperCoefficient) / lowerCoefficient;
-            result.Re = Math.Cos(exponent);
-            result.Im = Math.Sin(exponent);
-            return result;
-        }
+            int bits = (int)Math.Log(buffer.Length, 2);
 
-        private static List<Complex> CalculateWCoefficients(int vectorSize, bool forReverseTransform)
-        {
-            List<Complex> result = new List<Complex>();
-            int multiplier = forReverseTransform ? -1 : 1;
-            int halfOfVectorSize = vectorSize / 2;
-            for (int i = 0; i < halfOfVectorSize; i++)
+            for (int j = 1; j < buffer.Length; j++)
             {
-                result.Add(GetWCoefficient(-i * multiplier, vectorSize, true));
+                int swapPos = BitReverse(j, bits);
+                if (swapPos <= j)
+                {
+                    continue;
+                }
+                var temp = buffer[j];
+                buffer[j] = buffer[swapPos];
+                buffer[swapPos] = temp;
             }
 
-            return result;
+
+            for (int N = 2; N <= buffer.Length; N <<= 1)
+            {
+                for (int i = 0; i < buffer.Length; i += N)
+                {
+                    for (int k = 0; k < N / 2; k++)
+                    {
+                        int evenIndex = i + k;
+                        int oddIndex = i + k + (N / 2);
+                        var even = buffer[evenIndex];
+                        var odd = buffer[oddIndex];
+
+                        double term = -2 * Math.PI * k / N;
+                        Complex exp = new Complex(Math.Cos(term), Math.Sin(term)) * odd;
+
+                        buffer[evenIndex] = even + exp;
+                        buffer[oddIndex] = even - exp;
+                    }
+                }
+            }
+        }
+
+        private static int BitReverse(int n, int bits)
+        {
+            int reversedN = n;
+            int count = bits - 1;
+
+            n >>= 1;
+            while (n > 0)
+            {
+                reversedN = (reversedN << 1) | (n & 1);
+                count--;
+                n >>= 1;
+            }
+
+            return (reversedN << count) & ((1 << bits) - 1);
+        }
+
+        private static void Conjugate(Complex[] data)
+        {
+            for (int i = 0; i < data.Length; i++)
+            {
+                data[i] = Complex.Conjugate(data[i]);
+            }
         }
 
         #endregion
