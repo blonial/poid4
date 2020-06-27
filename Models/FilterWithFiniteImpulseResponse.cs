@@ -8,7 +8,7 @@ namespace poid.Models
     {
         #region Static methods
 
-        public static double[] GetFilterValues(int fc, int fs, int L)
+        public static double[] GetFilterValues(double fc, double fs, int L)
         {
             double[] result = new double[L];
             double half = (L - 1) / 2.0;
