@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Windows.Input;
@@ -466,7 +467,7 @@ namespace poid.ViewModels
                 double[] windowFactors = FourierWindows.GetWindowFactors(M, this.SelectedWindowType);
                 for (int i = 0; i < windows.Length; i++)
                 {
-                    for (int j = 0; j < L; j++)
+                    for (int j = 0; j < M; j++)
                     {
                         if (i * R + j < this.SignalData.Samples.Length)
                         {
@@ -477,7 +478,7 @@ namespace poid.ViewModels
                             windows[i][j] = 0;
                         }
                     }
-                    for (int j = L; j < n; j++)
+                    for (int j = M; j < n; j++)
                     {
                         windows[i][j] = 0;
                     }
@@ -513,7 +514,7 @@ namespace poid.ViewModels
                     windowsComplex[i] = FourierTransform.FFT(windows[i]);
                     for (int j = 0; j < windowsComplex[i].Length; j++)
                     {
-                        windowsComplex[i][j] = Complex.Multiply(windowsComplex[i][j], filteredComplex[j]);
+                        windowsComplex[i][j] *= filteredComplex[j];
                     }
                     windows[i] = FourierTransform.IFFT(windowsComplex[i]);
                 }
